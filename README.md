@@ -1,4 +1,4 @@
-<p align="center"><img width="220" src="http://www.zuggr.com/file/angel_wechat.jpg"></p>
+<p align="center"><img width="320" src="http://www.zuggr.com/file/angel_wechat.jpg"></p>
 
 **Angel WeChat** is a WeChat plugin based on [**Angel Framework**](https://github.com/angel-project/framework).
 
