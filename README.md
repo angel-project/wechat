@@ -55,6 +55,20 @@ listen()方法有三个输入：
 - 触发事件：文字支持字符串和正则表达式匹配，事件支持SCAN（扫码）、subscribe（关注）、CLICK（点击）触发。当用户输入不满足任何规则时，当触发事件为'empty'。
 - 触发后执行的代码：该function输入两个值：用户输入和微信object。你可以通过用户输入来获取所有用户传送至服务器的指令；微信object让你在function继续自由使用微信方法。
 
+创建菜单
+-------------
+```PHP
+  $wx = new angel\wechat($appid,$secret,$token); //初始化微信object
+
+  $menu = [[
+    'type' => 'click',
+    'name' => '欢迎光临',
+    'key' => 'welcome'
+  ]]; //生成一个click时间菜单，具体创建菜单指令请参考微信开发者档案
+
+  $at = $wx->access_token();  //获取access token
+  $wx->menu($at,$menu); //生成菜单
+```
 
 English Doc
 -------------
