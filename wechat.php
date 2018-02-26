@@ -10,9 +10,9 @@
 
     private $token;
 
-    private $re_text;
+    private $re_text = [];
 
-    private $re_event;
+    private $re_event = [];
 
     private $from;
 
@@ -28,7 +28,7 @@
       if(($update_time-$at['Updete_Time'])<139){
         return $at['Token'];
       }else {
-        $request = curl::get('https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid='.$appid.'&secret='.$secret);
+        $request = curl::get('https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid='.$this->appid.'&secret='.$this->secret);
         $at = json_decode($request)->access_token;
         sql::update('access_token')->this([
           'Token'=>$at,
@@ -53,7 +53,7 @@
     }
 
     public function run(){
-      $wx = simplexml_load_string(file_get_contents('php://input'),'SimpleXMLElement',LIBXML_NOCDATA);
+      $wx = \simplexml_load_string(file_get_contents('php://input'),'SimpleXMLElement',LIBXML_NOCDATA);
       session_start();
       $_SESSION['openid'] = $wx->FromUserName;
       switch(trim($wx->MsgType)){
@@ -68,11 +68,23 @@
       }
       $this->from = $wx->ToUserName;
       if(array_key_exists($pattern,$list)) {
-        call_user_func_array($list[$pattern],[$wx]);
+        call_user_func_array($list[$pattern],[$wx,$this]);
+      }else{
+        $flag = true;
+        foreach($list as $key=>$value){
+          if(is::in($key,$pattern)){
+            call_user_func_array($list[$key],[$wx,$this]);
+            $flag = false;
+            break;
+          }
+        }
+        if($flag){
+          call_user_func_array($list['empty'],[$wx,$this]);
+        }
       }
     }
 
-    public static function return($type,$return){
+    public function return($type,$return){
       $time = date('YmdHis');
       switch($type){
         case 'text':
@@ -86,7 +98,7 @@
           </xml>';
           break;
         case 'news':
-          $count = sizeof($return)-1;
+          $count = sizeof($return['articles']);
           echo '<xml>
           <ToUserName><![CDATA['.$return['to'].']]></ToUserName>
           <FromUserName><![CDATA['.$this->from.']]></FromUserName>
@@ -94,7 +106,7 @@
           <MsgType><![CDATA[news]]></MsgType>
           <ArticleCount>'.$count.'</ArticleCount>
           <Articles>';
-          foreach($return as $i){
+          foreach($return['articles'] as $i){
             if(is_array($i)){
               echo '<item>
               <Title><![CDATA['.$i['title'].']]></Title>
@@ -107,6 +119,53 @@
           echo '</Articles>
           </xml>';
           break;
+        case 'transfer_customer_service':
+          echo '<xml>
+          <ToUserName>< ![CDATA['.$return['to'].'] ]></ToUserName>
+          <FromUserName>< ![CDATA['.$this->from.'] ]></FromUserName>
+          <CreateTime>'.$time.'</CreateTime>
+          <MsgType>< ![CDATA[transfer_customer_service] ]></MsgType>
+          <TransInfo>
+            <KfAccount>< ![CDATA['.$return['id'].'] ]></KfAccount>
+          </TransInfo>
+          </xml>';
+          break;
+      }
+    }
+
+    public function tmp_return($at,$return){
+      $post_json = json_encode([
+        'touser' => $return['to'],
+        'template_id' => $return['id'],
+        'url' => $return['url'],
+        'data' => $return['data']
+      ],JSON_UNESCAPED_UNICODE);
+      return curl::post('https://api.weixin.qq.com/cgi-bin/message/template/send?access_token='.$at,$post_json);
+    }
+
+    public function custom_return($at,$type,$return){
+      $time = date('YmdHis');
+      switch($type){
+        case 'text':
+          $post_json = json_encode([
+            'touser' => $return['to'],
+            'msgtype' => 'text',
+            'text' => [
+              'content' => $return['content']
+            ]
+          ],JSON_UNESCAPED_UNICODE);
+          return curl::post('https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token='.$at,$post_json);
+        break;
+        case 'news':
+          $post_json = json_encode([
+            'touser' => $return['to'],
+            'msgtype' => 'news',
+            'news' => [
+              'articles' => $return['articles']
+            ]
+          ],JSON_UNESCAPED_UNICODE);
+          return curl::post('https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token='.$at,$post_json);
+        break;
       }
     }
 
@@ -117,4 +176,73 @@
     public function setup(){
       echo user::get('echostr');
     } //激活微信
+
+    public static function get_qr_ticket($access_token,$in_p){
+      $response = curl::post(
+        'https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token='.$access_token,
+        '{"action_name":"QR_LIMIT_STR_SCENE","action_info":{"scene":{"scene_str":"'.$in_p.'"}}}'
+      );
+      $postObj = json_decode($response);
+      return urlencode($postObj->ticket);
+    }
+
+    public static function get_qr_img($ticket){
+      return 'https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket='.$ticket;
+    }
+
+    public function get_user_info($at,$openid){
+      return json_decode(curl::get('https://api.weixin.qq.com/cgi-bin/user/info?access_token='.$at.'&openid='.$openid.'&lang=zh_CN'));
+    }
+
+    public function jsapi($at){
+      $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      $str = "";
+      for ($i = 0; $i < 16; $i++) {
+        $str .= substr($chars, mt_rand(0, strlen($chars) - 1), 1);
+      }
+      if(!file_exists(user::dir().'/file/json/jsapi_ticket.json')){
+        $url = 'https://api.weixin.qq.com/cgi-bin/ticket/getticket?type=jsapi&access_token='.$at;
+        $res = json_decode(curl::get($url));
+        $ticket = $res->ticket;
+        if($ticket){
+          $data = [
+            'expire_time' => time() + 7000,
+            'jsapi_ticket' => $ticket
+          ];
+          $fp = fopen(user::dir()."/file/json/jsapi_ticket.json", "w");
+          fwrite($fp, json_encode($data));
+          fclose($fp);
+        }
+      }else{
+        $data = json_decode(file_get_contents(user::dir()."/file/json/jsapi_ticket.json"));
+        if ($data->expire_time < time()) {
+          $url = 'https://api.weixin.qq.com/cgi-bin/ticket/getticket?type=jsapi&access_token='.$at;
+          $res = json_decode(curl::get($url));
+          $ticket = $res->ticket;
+          if($ticket){
+            $data->expire_time = time() + 7000;
+            $data->jsapi_ticket = $ticket;
+            $fp = fopen(user::dir()."/file/json/jsapi_ticket.json", "w");
+            fwrite($fp, json_encode($data));
+            fclose($fp);
+          }
+        }else{
+          $ticket = $data->jsapi_ticket;
+        }
+      }
+      $timestamp = time();
+      $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+      $url = "$protocol$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+      $string = "jsapi_ticket=$ticket&noncestr=$str&timestamp=$timestamp&url=$url";
+      $sign = sha1($string);
+      $signPackage = array(
+        "appid"     => $this->appid,
+        "noncestr"  => $str,
+        "timestamp" => $timestamp,
+        "signature" => $sign,
+        "rawString" => $string
+      );
+      return $signPackage;
+    }
+
   }
