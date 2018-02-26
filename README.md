@@ -17,6 +17,11 @@ composer require angel-project/wechat
 ![GitHub php](https://img.shields.io/packagist/php-v/symfony/symfony.svg)
 ![GitHub license](https://img.shields.io/cocoapods/l/AFNetworking.svg)  
 
+
+
+
+English Doc
+-------------
 **Angel WeChat** is a WeChat plugin based on [**Angel Framework**](https://github.com/angel-project/framework)  
 
 Installation
