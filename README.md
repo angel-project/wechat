@@ -1,5 +1,6 @@
 <p align="center"><img width="320" src="https://xy.zuggr.com/file/angel_wechat.jpg"></p>
-
+中文档案
+-------------
 **Angel微信** 是基于[**Angel框架**](https://github.com/angel-project/framework)的公众号开发框架
 
 安装
