@@ -23,19 +23,34 @@
     }
 
     public function access_token(){
-      $at = sql::select('access_token')->where('ID=?',[$this->appid])->limit(1)->fetch();
       $update_time = date('YmdHi');
-      if(($update_time-$at['Updete_Time'])<139){
-        return $at['Token'];
-      }else {
+      if(!file_exists(user::dir().'/file/json/access_token.json')){
         $request = curl::get('https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid='.$this->appid.'&secret='.$this->secret);
         $at = json_decode($request)->access_token;
-        sql::update('access_token')->this([
-          'Token'=>$at,
-          'Updete_Time'=>$update_time
-        ])->where('ID=?',[$this->appid])->execute();
-        return $at;
+        $data = [
+          'expire_time' => $update_time + 140,
+          'access_token' => $at
+        ];
+        $fp = fopen(user::dir()."/file/json/access_token.json", "w");
+        fwrite($fp, json_encode($data));
+        fclose($fp);
+      }else{
+        $data = json_decode(file_get_contents(user::dir()."/file/json/access_token.json"));
+        if ($data->expire_time < $update_time) {
+          $request = curl::get('https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid='.$this->appid.'&secret='.$this->secret);
+          $at = json_decode($request)->access_token;
+          $data = [
+            'expire_time' => $update_time + 140,
+            'access_token' => $at
+          ];
+          $fp = fopen(user::dir()."/file/json/access_token.json", "w");
+          fwrite($fp, json_encode($data));
+          fclose($fp);
+        }else{
+          $at = $data->access_token;
+        }
       }
+      return $at;
     } //access_token
 
     public function listen($kind,$pattern,$method){
