@@ -201,6 +201,15 @@
       return urlencode($postObj->ticket);
     }
 
+    public static function get_tmp_qr_ticket($access_token,$in_p,$exp){
+      $response = curl::post(
+        'https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token='.$access_token,
+        '{"expire_seconds":'.$exp.',"action_name":"QR_STR_SCENE","action_info":{"scene":{"scene_str":"'.$in_p.'"}}}'
+      );
+      $postObj = json_decode($response);
+      return urlencode($postObj->ticket);
+    }
+
     public static function get_qr_img($ticket){
       return 'https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket='.$ticket;
     }
