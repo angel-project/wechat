@@ -218,6 +218,21 @@
       return json_decode(curl::get('https://api.weixin.qq.com/cgi-bin/user/info?access_token='.$at.'&openid='.$openid.'&lang=zh_CN'));
     }
 
+    public function get_all_user_id($at){
+      $out = json_decode(curl::get('https://api.weixin.qq.com/cgi-bin/user/get?access_token='.$at));
+      $raw = $out->data->openid;
+      if((int)$out->count<(int)$out->total){
+        $next = 1;
+        while((int)$out->count<(int)$out->total){
+          $to = json_decode(curl::get('https://api.weixin.qq.com/cgi-bin/user/get?access_token='.$at.'&next_openid=NEXT_OPENID'.$next));
+          $raw = ary::merge($raw,$to->data->openid);
+          $out->count = $out->count+$to->count;
+          $next = $next+1;
+        }
+      }
+      return $raw;
+    }
+
     public function jsapi($at){
       $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
       $str = "";
