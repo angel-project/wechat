@@ -225,7 +225,7 @@
         $next = 1;
         while((int)$out->count<(int)$out->total){
           $to = json_decode(curl::get('https://api.weixin.qq.com/cgi-bin/user/get?access_token='.$at.'&next_openid=NEXT_OPENID'.$next));
-          $raw = ary::merge($raw,$to->data->openid);
+          $raw = ary::merge([$raw,$to->data->openid]);
           $out->count = $out->count+$to->count;
           $next = $next+1;
         }
