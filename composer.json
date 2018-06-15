@@ -2,18 +2,13 @@
   "name": "angel-project/wechat",
   "description": "WeChat plugin.",
   "license": "MIT",
-  "authors": [
-    {
-      "name": "Xiao Zimo",
-      "email": "xiaozimo@zuggr.com"
-    }
-  ],
-  "require": {
-    "php" : "^7.1.3"
-  },
+  "authors": [{
+    "name": "Xiao Zimo",
+    "email": "xiaozimo@zuggr.com"
+  }],
   "autoload": {
-      "psr-4": {
-          "angel\\": "/"
-      }
+    "psr-4": {
+      "angel\\": "/"
+    }
   }
 }
