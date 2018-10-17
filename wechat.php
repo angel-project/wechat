@@ -307,9 +307,9 @@ class wechat
     public function add_tags($access_token, $users, $tag_id)
     {
         $post_json = json_encode([
-          'tagid' => $tag_id,
-          'openid_list' => $users
+          'openid_list' => $users,
+          'tagid' => (int)$tag_id
         ], JSON_UNESCAPED_UNICODE);
-        curl::post('https://api.weixin.qq.com/cgi-bin/tags/members/batchtagging?access_token='.$access_token, $post_json);
+        return curl::post('https://api.weixin.qq.com/cgi-bin/tags/members/batchtagging?access_token='.$access_token, $post_json);
     }
 }
