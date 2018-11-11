@@ -23,29 +23,32 @@ class wechat
         $this->token = $Token;
     }
 
-    public function access_token()
+    public function access_token($dir = null)
     {
+        if ($dir == null) {
+            $dir = user::dir();
+        }
         $update_time = date('YmdHi');
-        if (!file_exists(user::dir().'/file/json/access_token.json')) {
+        if (!file_exists($dir.'/file/json/access_token.json')) {
             $request = curl::get('https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid='.$this->appid.'&secret='.$this->secret);
             $at = json_decode($request)->access_token;
             $data = [
-          'expire_time' => $update_time + 140,
+          'expire_time' => $update_time + 100,
           'access_token' => $at
         ];
-            $fp = fopen(user::dir()."/file/json/access_token.json", "w");
+            $fp = fopen($dir."/file/json/access_token.json", "w");
             fwrite($fp, json_encode($data));
             fclose($fp);
         } else {
-            $data = json_decode(file_get_contents(user::dir()."/file/json/access_token.json"));
+            $data = json_decode(file_get_contents($dir."/file/json/access_token.json"));
             if ($data->expire_time < $update_time) {
                 $request = curl::get('https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid='.$this->appid.'&secret='.$this->secret);
                 $at = json_decode($request)->access_token;
                 $data = [
-            'expire_time' => $update_time + 140,
-            'access_token' => $at
-          ];
-                $fp = fopen(user::dir()."/file/json/access_token.json", "w");
+                  'expire_time' => $update_time + 100,
+                  'access_token' => $at
+                ];
+                $fp = fopen($dir."/file/json/access_token.json", "w");
                 fwrite($fp, json_encode($data));
                 fclose($fp);
             } else {
@@ -247,28 +250,31 @@ class wechat
         return $raw;
     }
 
-    public function jsapi($at)
+    public function jsapi($at, $dir = null)
     {
+        if ($dir == null) {
+            $dir = user::dir();
+        }
         $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         $str = "";
         for ($i = 0; $i < 16; $i++) {
             $str .= substr($chars, mt_rand(0, strlen($chars) - 1), 1);
         }
-        if (!file_exists(user::dir().'/file/json/jsapi_ticket.json')) {
+        if (!file_exists($dir.'/file/json/jsapi_ticket.json')) {
             $url = 'https://api.weixin.qq.com/cgi-bin/ticket/getticket?type=jsapi&access_token='.$at;
             $res = json_decode(curl::get($url));
             $ticket = $res->ticket;
             if ($ticket) {
                 $data = [
-            'expire_time' => time() + 7000,
-            'jsapi_ticket' => $ticket
-          ];
-                $fp = fopen(user::dir()."/file/json/jsapi_ticket.json", "w");
+                  'expire_time' => time() + 7000,
+                  'jsapi_ticket' => $ticket
+                ];
+                $fp = fopen($dir."/file/json/jsapi_ticket.json", "w");
                 fwrite($fp, json_encode($data));
                 fclose($fp);
             }
         } else {
-            $data = json_decode(file_get_contents(user::dir()."/file/json/jsapi_ticket.json"));
+            $data = json_decode(file_get_contents($dir."/file/json/jsapi_ticket.json"));
             if ($data->expire_time < time()) {
                 $url = 'https://api.weixin.qq.com/cgi-bin/ticket/getticket?type=jsapi&access_token='.$at;
                 $res = json_decode(curl::get($url));
@@ -276,7 +282,7 @@ class wechat
                 if ($ticket) {
                     $data->expire_time = time() + 7000;
                     $data->jsapi_ticket = $ticket;
-                    $fp = fopen(user::dir()."/file/json/jsapi_ticket.json", "w");
+                    $fp = fopen($dir."/file/json/jsapi_ticket.json", "w");
                     fwrite($fp, json_encode($data));
                     fclose($fp);
                 }
@@ -302,6 +308,15 @@ class wechat
     public function get_all_tags($access_token)
     {
         return json_decode(curl::get('https://api.weixin.qq.com/cgi-bin/tags/get?access_token='.$access_token), true)['tags'];
+    }
+
+    public function get_all_users_under_tag($access_token, $tag_id)
+    {
+        $post_json = json_encode([
+          'tagid' => (int)$tag_id,
+          'next_openid' => ''
+        ], JSON_UNESCAPED_UNICODE);
+        return json_decode(curl::post('https://api.weixin.qq.com/cgi-bin/user/tag/get?access_token='.$access_token, $post_json), true);
     }
 
     public function add_tags($access_token, $users, $tag_id)
